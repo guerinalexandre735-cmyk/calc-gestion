@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Calc Gestion</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #111118;
+  --card: #16161f;
+  --border: #1e1e2e;
+  --accent: #6c63ff;
+  --accent2: #00e5a0;
+  --accent3: #ff6b6b;
+  --accent4: #ffc43d;
+  --text: #eeeef4;
+  --muted: #5a5a7a;
+  --label: #8888aa;
+  --radius: 16px;
+  --font: 'Sora', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  min-height: 100vh;
+  padding-bottom: 50px;
+  overflow-x: hidden;
+}
+.header {
+  padding: 52px 20px 16px;
+  text-align: center;
+  position: relative;
+}
+.header::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 260px; height: 180px;
+  background: radial-gradient(ellipse, rgba(108,99,255,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+.app-title {
+  font-size: 10px; font-weight: 600; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--accent);
+  font-family: var(--mono); margin-bottom: 5px;
+}
+.app-name {
+  font-size: 26px; font-weight: 700; letter-spacing: -0.5px;
+  background: linear-gradient(135deg, #fff 30%, var(--accent) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.tabs {
+  display: flex; margin: 16px 16px 0;
+  background: var(--surface); border-radius: 14px;
+  padding: 4px; border: 1px solid var(--border); gap: 4px;
+}
+.tab {
+  flex: 1; text-align: center; padding: 10px 4px;
+  font-size: 11px; font-weight: 600; border-radius: 10px;
+  cursor: pointer; color: var(--muted);
+  transition: all 0.22s; letter-spacing: 0.2px; line-height: 1.3;
+}
+.tab.active { background: var(--accent); color: #fff; box-shadow: 0 4px 14px rgba(108,99,255,0.35); }
+.section { display: none; padding: 14px 16px 0; }
+.section.active { display: block; }
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; margin-bottom: 12px;
+}
+.card-title {
+  font-size: 10px; font-weight: 600; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--accent);
+  font-family: var(--mono); margin-bottom: 14px;
+}
+.input-group { margin-bottom: 12px; }
+.input-label { font-size: 12px; color: var(--label); margin-bottom: 5px; display: block; font-weight: 500; }
+.input-row {
+  display: flex; align-items: center;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 0 14px; transition: border-color 0.2s;
+}
+.input-row:focus-within { border-color: var(--accent); }
+.input-row input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--text); font-family: var(--mono);
+  font-size: 16px; padding: 13px 0; -webkit-appearance: none; width: 100%;
+}
+.input-unit { font-size: 12px; color: var(--muted); font-family: var(--mono); font-weight: 500; white-space: nowrap; }
+.btn {
+  width: 100%; padding: 14px; border: none; border-radius: 12px;
+  font-family: var(--font); font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px; margin-top: 4px;
+}
+.btn-primary { background: var(--accent); color: white; box-shadow: 0 4px 18px rgba(108,99,255,0.3); }
+.btn-primary:active { transform: scale(0.97); }
+.btn-reset { background: transparent; color: var(--muted); border: 1px solid var(--border); margin-top: 8px; }
+.btn-excel {
+  background: linear-gradient(135deg, #1d6f42, #2ea05a);
+  color: white; box-shadow: 0 4px 18px rgba(30,111,66,0.3);
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-excel:active { transform: scale(0.97); }
+.result-box {
+  margin-top: 14px;
+  background: linear-gradient(135deg, rgba(108,99,255,0.1), rgba(0,229,160,0.07));
+  border: 1px solid rgba(108,99,255,0.25); border-radius: var(--radius);
+  padding: 16px; display: none;
+}
+.result-box.show { display: block; }
+.result-main { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; }
+.result-value { font-size: 34px; font-weight: 700; font-family: var(--mono); letter-spacing: -1px; }
+.result-value.positive { color: var(--accent2); }
+.result-value.negative { color: var(--accent3); }
+.result-value.neutral { color: var(--accent); }
+.result-unit { font-size: 16px; color: var(--muted); font-family: var(--mono); }
+.result-label { font-size: 12px; color: var(--muted); }
+.result-formula { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.result-formula span { color: var(--label); }
+.interp { margin-top: 10px; padding: 10px 14px; border-radius: 10px; font-size: 12px; font-weight: 500; display: none; }
+.interp.show { display: block; }
+.interp.up { background: rgba(0,229,160,0.1); color: var(--accent2); border: 1px solid rgba(0,229,160,0.2); }
+.interp.down { background: rgba(255,107,107,0.1); color: var(--accent3); border: 1px solid rgba(255,107,107,0.2); }
+.interp.neutral-b { background: rgba(108,99,255,0.1); color: var(--accent); border: 1px solid rgba(108,99,255,0.2); }
+.tip {
+  font-size: 11px; color: var(--muted); padding: 10px 12px;
+  background: var(--surface); border-radius: 10px;
+  border-left: 3px solid var(--accent); margin-bottom: 12px; line-height: 1.6;
+}
+.tip strong { color: var(--label); }
+.results-grid { display: none; gap: 10px; margin-top: 0; flex-direction: column; }
+.results-grid.show { display: flex; }
+.result-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.result-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px;
+}
+.result-card.wide {
+  background: linear-gradient(135deg, rgba(0,229,160,0.08), rgba(108,99,255,0.08));
+  border-color: rgba(0,229,160,0.22);
+}
+.result-card.warn { border-color: rgba(255,107,107,0.3); background: rgba(255,107,107,0.05); }
+.result-card.gold {
+  background: linear-gradient(135deg, rgba(255,196,61,0.08), rgba(108,99,255,0.06));
+  border-color: rgba(255,196,61,0.25);
+}
+.rc-label { font-size: 10px; color: var(--muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+.rc-value { font-size: 20px; font-weight: 700; font-family: var(--mono); letter-spacing: -0.5px; }
+.rc-value.green { color: var(--accent2); }
+.rc-value.purple { color: var(--accent); }
+.rc-value.red { color: var(--accent3); }
+.rc-value.gold { color: var(--accent4); }
+.rc-value.big { font-size: 26px; }
+.rc-sub { font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+.formules { font-family: var(--mono); font-size: 11px; color: var(--label); line-height: 2; }
+.excel-zone {
+  border: 2px dashed var(--border); border-radius: 14px;
+  padding: 24px 16px; text-align: center;
+  background: var(--surface); margin-bottom: 12px; transition: border-color 0.2s;
+}
+.excel-icon { font-size: 32px; margin-bottom: 8px; }
+.excel-hint { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.excel-hint strong { color: var(--label); }
+#excel-file-input { display: none; }
+.detect-panel { display: none; }
+.detect-panel.show { display: block; }
+.detect-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid var(--border); gap: 8px;
+}
+.detect-row:last-child { border-bottom: none; }
+.detect-name { font-size: 12px; color: var(--label); font-weight: 500; flex: 1; }
+.detect-val {
+  font-family: var(--mono); font-size: 13px; color: var(--accent2);
+  font-weight: 500; background: rgba(0,229,160,0.08);
+  padding: 4px 10px; border-radius: 8px; min-width: 90px; text-align: right;
+}
+.detect-val.manual { color: var(--accent4); background: rgba(255,196,61,0.1); }
+.detect-val.empty { color: var(--muted); background: var(--border); }
+.badge-auto { font-size: 9px; background: rgba(0,229,160,0.15); color: var(--accent2); border-radius: 6px; padding: 2px 6px; font-family: var(--mono); font-weight: 500; letter-spacing: 0.5px; white-space: nowrap; }
+.badge-manual { font-size: 9px; background: rgba(255,196,61,0.15); color: var(--accent4); border-radius: 6px; padding: 2px 6px; font-family: var(--mono); font-weight: 500; letter-spacing: 0.5px; white-space: nowrap; }
+.edit-btn { background: none; border: 1px solid var(--border); color: var(--muted); border-radius: 8px; padding: 4px 10px; font-size: 11px; cursor: pointer; font-family: var(--font); white-space: nowrap; }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; align-items: flex-end; justify-content: center; }
+.modal-overlay.show { display: flex; }
+.modal { background: var(--card); border: 1px solid var(--border); border-radius: 20px 20px 0 0; padding: 24px 20px 40px; width: 100%; max-width: 500px; animation: slideUp 0.25s ease; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-title { font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+.modal-input { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; color: var(--text); font-family: var(--mono); font-size: 18px; outline: none; -webkit-appearance: none; margin-bottom: 12px; }
+.modal-input:focus { border-color: var(--accent); }
+.modal-btns { display: flex; gap: 8px; }
+.modal-btns .btn { margin-top: 0; }
+.rows-preview { max-height: 200px; overflow-y: auto; margin-bottom: 12px; border: 1px solid var(--border); border-radius: 12px; display: none; }
+.rows-preview.show { display: block; }
+.row-item { display: flex; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border); gap: 10px; cursor: pointer; transition: background 0.15s; }
+.row-item:last-child { border-bottom: none; }
+.row-item:active { background: rgba(108,99,255,0.1); }
+.row-label { flex: 1; font-size: 12px; color: var(--label); }
+.row-amount { font-family: var(--mono); font-size: 13px; color: var(--text); font-weight: 500; }
+.rows-hint { font-size: 11px; color: var(--muted); padding: 8px 14px; text-align: center; }
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; }
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body { padding-bottom: calc(50px + env(safe-area-inset-bottom)); }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="app-title">STMG · Gestion</div>
+  <div class="app-name">Calc Gestion</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('taux')">Taux<br>d'évol.</div>
+  <div class="tab" onclick="switchTab('mscv')">MSCV<br>/ SR</div>
+  <div class="tab" onclick="switchTab('excel')">Import<br>Excel</div>
+</div>
+
+<!-- ══ TAB 1 : TAUX ══ -->
+<div class="section active" id="tab-taux">
+  <div class="tip"><strong>Formule :</strong> Taux = (VD − VA) ÷ VA × 100</div>
+  <div class="card">
+    <div class="card-title">Calculer le taux</div>
+    <div class="input-group">
+      <label class="input-label">VA — Valeur de départ</label>
+      <div class="input-row">
+        <input type="text" id="va" placeholder="ex : 1 200" inputmode="decimal" oninput="fmtInput(this)">
+        <span class="input-unit">€</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">VD — Valeur d'arrivée</label>
+      <div class="input-row">
+        <input type="text" id="vd" placeholder="ex : 1 500" inputmode="decimal" oninput="fmtInput(this)">
+        <span class="input-unit">€</span>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="calcTaux()">Calculer →</button>
+    <button class="btn btn-reset" onclick="resetTaux()">Réinitialiser</button>
+    <div class="result-box" id="taux-result">
+      <div class="result-main">
+        <div class="result-value" id="taux-value">—</div>
+      </div>
+      <div class="result-label">Taux d'évolution</div>
+      <div class="result-formula" id="taux-formula"></div>
+    </div>
+    <div class="interp" id="taux-interp"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Trouver la VD</div>
+    <div class="tip" style="margin-bottom:12px">Connaît VA + taux → calcule VD</div>
+    <div class="input-group">
+      <label class="input-label">VA — Valeur de départ</label>
+      <div class="input-row">
+        <input type="text" id="va2" placeholder="ex : 1 200" inputmode="decimal" oninput="fmtInput(this)">
+        <span class="input-unit">€</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Taux d'évolution</label>
+      <div class="input-row">
+        <input type="text" id="taux2" placeholder="ex : 25" inputmode="decimal" oninput="fmtInput(this)">
+        <span class="input-unit">%</span>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="calcVD()">Calculer VD →</button>
+    <button class="btn btn-reset" onclick="resetVD()">Réinitialiser</button>
+    <div class="result-box" id="vd-result">
+      <div class="result-main">
+        <div class="result-value neutral" id="vd-value">—</div>
+        <div class="result-unit">€</div>
+      </div>
+      <div class="result-label">Valeur d'arrivée (VD)</div>
+      <div class="result-formula" id="vd-formula"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Trouver la VA</div>
+    <div class="tip" style="margin-bottom:12px">Connaît VD + taux → calcule VA</div>
+    <div class="input-group">
+      <label class="input-label">VD — Valeur d'arrivée</label>
+      <div class="input-row">
+        <input type="text" id="vd3" placeholder="ex : 1 500" inputmode="decimal" oninput="fmtInput(this)">
+        <span class="input-unit">€</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Taux d'évolution</label>
+      <div class="input-row">
+        <input type="text" id="taux3" placeholder="ex : 25" inputmode="decimal" oninput="fmtInput(this)">
+        <span class="input-unit">%</span>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="calcVA()">Calculer VA →</button>
+    <button class="btn btn-reset" onclick="resetVA()">Réinitialiser</button>
+    <div class="result-box" id="va-result">
+      <div class="result-main">
+        <div class="result-value neutral" id="va-value">—</div>
+        <div class="result-unit">€</div>
+      </div>
+      <div class="result-label">Valeur de départ (VA)</div>
+      <div class="result-formula" id="va-formula"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB 2 : MSCV / SR ══ -->
+<div class="section" id="tab-mscv">
+  <div class="tip">Les résultats se calculent <strong>en temps réel</strong> dès que tu remplis les champs</div>
+  <div class="card">
+    <div class="card-title">Données</div>
+    <div class="input-group">
+      <label class="input-label">Chiffre d'affaires (CA)</label>
+      <div class="input-row">
+        <input type="text" id="ca" placeholder="ex : 50 000" inputmode="decimal" oninput="fmtInput(this); calcMSCV()">
+        <span class="input-unit">€</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Charges variables (CV)</label>
+      <div class="input-row">
+        <input type="text" id="cv" placeholder="ex : 20 000" inputmode="decimal" oninput="fmtInput(this); calcMSCV()">
+        <span class="input-unit">€</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">Charges fixes (CF)</label>
+      <div class="input-row">
+        <input type="text" id="cf" placeholder="ex : 15 000" inputmode="decimal" oninput="fmtInput(this); calcMSCV()">
+        <span class="input-unit">€</span>
+      </div>
+    </div>
+    <button class="btn btn-reset" onclick="resetMSCV()">Réinitialiser</button>
+  </div>
+
+  <div class="results-grid" id="mscv-results">
+    <div class="result-row">
+      <div class="result-card">
+        <div class="rc-label">MSCV</div>
+        <div class="rc-value green" id="res-mscv">—</div>
+        <div class="rc-sub">Marge s/ coût variable</div>
+      </div>
+      <div class="result-card">
+        <div class="rc-label">TMSCV</div>
+        <div class="rc-value purple" id="res-tmscv">—</div>
+        <div class="rc-sub">Taux de marge s/ CV</div>
+      </div>
+    </div>
+    <div class="result-card wide" id="sr-card">
+      <div class="rc-label">Seuil de Rentabilité (SR)</div>
+      <div class="rc-value green big" id="res-sr">—</div>
+      <div class="rc-sub" id="res-sr-sub">CA minimum pour couvrir toutes les charges</div>
+    </div>
+    <div class="result-row">
+      <div class="result-card" id="res-resultat-card">
+        <div class="rc-label">Résultat</div>
+        <div class="rc-value" id="res-resultat">—</div>
+        <div class="rc-sub" id="res-resultat-sub">Bénéfice / Perte</div>
+      </div>
+      <div class="result-card">
+        <div class="rc-label">Marge de sécu.</div>
+        <div class="rc-value" id="res-margesec">—</div>
+        <div class="rc-sub">CA − SR</div>
+      </div>
+    </div>
+
+    <!-- POINT MORT -->
+    <div class="card" style="margin-bottom:0">
+      <div class="card-title">⏱ Point Mort</div>
+      <div class="input-group">
+        <label class="input-label">Jours d'activité par an</label>
+        <div class="input-row">
+          <input type="text" id="jours-an" value="365" inputmode="decimal" oninput="fmtInput(this); calcMSCV()">
+          <span class="input-unit">jours</span>
+        </div>
+      </div>
+      <div class="input-group" style="margin-bottom:0">
+        <label class="input-label">Heures travaillées par jour</label>
+        <div class="input-row">
+          <input type="text" id="heures-jour" value="8" inputmode="decimal" oninput="fmtInput(this); calcMSCV()">
+          <span class="input-unit">h / j</span>
+        </div>
+      </div>
+      <div id="pm-results" style="display:none; margin-top:14px">
+        <div class="result-card gold" style="margin-bottom:10px">
+          <div class="rc-label">Point mort — jours</div>
+          <div class="rc-value gold big" id="pm-jours">—</div>
+          <div class="rc-sub" id="pm-jours-sub"></div>
+        </div>
+        <div class="result-row">
+          <div class="result-card">
+            <div class="rc-label">En mois</div>
+            <div class="rc-value gold" id="pm-mois">—</div>
+            <div class="rc-sub" id="pm-mois-sub"></div>
+          </div>
+          <div class="result-card">
+            <div class="rc-label">En heures</div>
+            <div class="rc-value gold" id="pm-heures">—</div>
+            <div class="rc-sub">de travail total</div>
+          </div>
+        </div>
+        <div class="result-card" style="margin-top:10px; background:rgba(108,99,255,0.08); border-color:rgba(108,99,255,0.22)">
+          <div class="rc-label">Date de rentabilité (si début = 1er jan.)</div>
+          <div class="rc-value purple" id="pm-date" style="font-size:17px">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CA CIBLE -->
+  <div class="card" style="margin-top:12px;display:none" id="ca-cible-card">
+    <div class="card-title">🎯 CA Cible</div>
+    <div class="tip" style="margin-bottom:12px">Les CF sont gardées fixes. Fais varier le résultat ou le taux de marge voulu pour voir le CA à atteindre.</div>
+    <div class="input-group">
+      <label class="input-label">Résultat cible souhaité</label>
+      <div class="input-row">
+        <input type="text" id="res-cible" placeholder="ex : 10 000" inputmode="decimal" oninput="fmtInput(this); calcCACible()">
+        <span class="input-unit">€</span>
+      </div>
+    </div>
+    <div class="input-group" style="margin-bottom:0">
+      <label class="input-label">Taux de marge cible (TMSCV)</label>
+      <div class="input-row">
+        <input type="text" id="taux-cible" placeholder="ex : 40" inputmode="decimal" oninput="fmtInput(this); calcCACible()">
+        <span class="input-unit">%</span>
+      </div>
+    </div>
+    <div id="ca-cible-results" style="display:none; margin-top:14px">
+      <div class="result-card wide" style="margin-bottom:10px">
+        <div class="rc-label">CA cible (résultat visé)</div>
+        <div class="rc-value green big" id="ca-cible-res">—</div>
+        <div class="rc-sub" id="ca-cible-res-sub"></div>
+      </div>
+      <div class="result-card" style="background:rgba(108,99,255,0.08);border-color:rgba(108,99,255,0.22)">
+        <div class="rc-label">CA cible (taux de marge visé)</div>
+        <div class="rc-value purple big" id="ca-cible-taux">—</div>
+        <div class="rc-sub" id="ca-cible-taux-sub"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SRF -->
+  <div class="card" style="margin-top:12px;display:none" id="srf-card">
+    <div class="card-title">💰 Seuil de Rentabilité Financière</div>
+    <div class="tip" style="margin-bottom:12px">Le SRF intègre les charges financières (intérêts) et le remboursement du capital pour savoir à partir de quel CA l'entreprise couvre aussi ses dettes.</div>
+    <div class="input-group">
+      <label class="input-label">Charges financières — intérêts d'emprunt</label>
+      <div class="input-row">
+        <input type="text" id="charges-fin" placeholder="ex : 3 000" inputmode="decimal" oninput="fmtInput(this); calcSRF()">
+        <span class="input-unit">€</span>
+      </div>
+    </div>
+    <div class="input-group" style="margin-bottom:0">
+      <label class="input-label">Remboursement du capital (annuel)</label>
+      <div class="input-row">
+        <input type="text" id="remb-capital" placeholder="ex : 5 000" inputmode="decimal" oninput="fmtInput(this); calcSRF()">
+        <span class="input-unit">€</span>
+      </div>
+    </div>
+    <div id="srf-results" style="display:none; margin-top:14px">
+      <div class="result-card wide" id="srf-main-card" style="margin-bottom:10px">
+        <div class="rc-label">Seuil de Rentabilité Financière (SRF)</div>
+        <div class="rc-value big" id="res-srf" style="color:var(--accent3)">—</div>
+        <div class="rc-sub" id="res-srf-sub"></div>
+      </div>
+      <div class="result-row">
+        <div class="result-card">
+          <div class="rc-label">Écart SRF − SR</div>
+          <div class="rc-value" id="res-srf-ecart" style="color:var(--accent4)">—</div>
+          <div class="rc-sub">CA supplémentaire nécessaire</div>
+        </div>
+        <div class="result-card">
+          <div class="rc-label">Marge / SRF</div>
+          <div class="rc-value" id="res-srf-marge">—</div>
+          <div class="rc-sub">CA actuel − SRF</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <div class="card-title">Formules</div>
+    <div class="formules">
+      MSCV &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= CA − CV<br>
+      TMSCV &nbsp;&nbsp;&nbsp;&nbsp;= MSCV ÷ CA × 100<br>
+      SR &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= CF ÷ TMSCV × 100<br>
+      Résultat &nbsp;&nbsp;= MSCV − CF<br>
+      Marge sécu. &nbsp;= CA − SR<br>
+      Point mort &nbsp;&nbsp;= SR ÷ CA × jours/an<br>
+      CA cible &nbsp;&nbsp;&nbsp;= (CF + Résultat cible) ÷ TMSCV × 100<br>
+      SRF &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;= (CF + Chg fin. + Capital) ÷ TMSCV × 100
+    </div>
+  </div>
+</div>
+
+<!-- ══ TAB 3 : EXCEL ══ -->
+<div class="section" id="tab-excel">
+  <div class="tip">Importe ton <strong>compte de résultat Excel</strong> — l'appli détecte CA, CV et CF automatiquement. Tu peux corriger manuellement.</div>
+  <div class="card">
+    <div class="card-title">Importer le fichier</div>
+    <input type="file" id="excel-file-input" accept=".xlsx,.xls,.csv">
+    <div class="excel-zone" id="excel-zone" onclick="document.getElementById('excel-file-input').click()">
+      <div class="excel-icon">📊</div>
+      <div class="excel-hint"><strong>Appuie ici</strong> pour sélectionner ton fichier<br>Excel (.xlsx, .xls) ou CSV</div>
+    </div>
+    <button class="btn btn-excel" onclick="document.getElementById('excel-file-input').click()">
+      <span>📂</span> Choisir un fichier Excel
+    </button>
+  </div>
+
+  <div class="detect-panel" id="detect-panel">
+    <div class="card">
+      <div class="card-title">Valeurs détectées</div>
+      <div class="detect-row">
+        <div>
+          <div class="detect-name">Chiffre d'affaires (CA)</div>
+          <div id="ca-src" style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:2px"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span id="ca-badge" class="badge-auto">AUTO</span>
+          <div class="detect-val" id="ca-detect">—</div>
+          <button class="edit-btn" onclick="openModal('ca')">✏️</button>
+        </div>
+      </div>
+      <div class="detect-row">
+        <div>
+          <div class="detect-name">Charges variables (CV)</div>
+          <div id="cv-src" style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:2px"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span id="cv-badge" class="badge-auto">AUTO</span>
+          <div class="detect-val" id="cv-detect">—</div>
+          <button class="edit-btn" onclick="openModal('cv')">✏️</button>
+        </div>
+      </div>
+      <div class="detect-row">
+        <div>
+          <div class="detect-name">Charges fixes (CF)</div>
+          <div id="cf-src" style="font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:2px"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span id="cf-badge" class="badge-auto">AUTO</span>
+          <div class="detect-val" id="cf-detect">—</div>
+          <button class="edit-btn" onclick="openModal('cf')">✏️</button>
+        </div>
+      </div>
+      <div style="height:12px"></div>
+      <button class="btn btn-primary" onclick="sendToMSCV()">Calculer MSCV / SR avec ces valeurs →</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Lignes du fichier</div>
+      <div class="tip" style="margin-bottom:10px">Appuie sur une ligne pour l'assigner manuellement à CA, CV ou CF</div>
+      <div class="rows-preview show" id="rows-preview"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Modifier la valeur</div>
+    <input type="text" class="modal-input" id="modal-input" inputmode="decimal" placeholder="Entrer la valeur" oninput="fmtInput(this)">
+    <div class="modal-btns">
+      <button class="btn btn-primary" style="flex:1" onclick="saveModal()">Confirmer</button>
+      <button class="btn btn-reset" style="width:auto;padding:14px 18px" onclick="closeModal()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+const detected = { ca: null, cv: null, cf: null };
+const sources  = { ca: '', cv: '', cf: '' };
+const isManual = { ca: false, cv: false, cf: false };
+let allRows = [];
+let assignTarget = null;
+
+// ── FORMAT INPUT ──
+function fmtInput(el) {
+  let raw = el.value.replace(/\s/g, '').replace(',', '.');
+  const neg = raw.startsWith('-');
+  raw = raw.replace(/-/g, '');
+  const parts = raw.split('.');
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  el.value = (neg ? '-' : '') + parts.join('.');
+}
+
+function rawNum(str) {
+  if (str === null || str === undefined || str === '') return NaN;
+  return parseFloat(String(str).replace(/\s/g, '').replace(',', '.'));
+}
+
+function fmt(n, dec=2) {
+  if (n === null || isNaN(n)) return '—';
+  return n.toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
+// ── TAB ──
+function switchTab(name) {
+  const names = ['taux','mscv','excel'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', names[i] === name));
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+// ── TAUX ──
+function calcTaux() {
+  const va = rawNum(document.getElementById('va').value);
+  const vd = rawNum(document.getElementById('vd').value);
+  if (isNaN(va) || isNaN(vd) || va === 0) { alert('Remplis VA et VD correctement.'); return; }
+  const t = ((vd - va) / va) * 100;
+  const el = document.getElementById('taux-value');
+  el.textContent = fmt(t) + ' %';
+  el.className = 'result-value ' + (t > 0 ? 'positive' : t < 0 ? 'negative' : 'neutral');
+  document.getElementById('taux-formula').innerHTML = `<span>Calcul :</span> (${fmt(vd)} − ${fmt(va)}) ÷ ${fmt(va)} × 100`;
+  document.getElementById('taux-result').classList.add('show');
+  const interp = document.getElementById('taux-interp');
+  if (t > 0) {
+    interp.textContent = `▲ Hausse de ${fmt(t)} % — la valeur a augmenté de ${fmt(vd-va)} €`;
+    interp.className = 'interp show up';
+  } else if (t < 0) {
+    interp.textContent = `▼ Baisse de ${fmt(Math.abs(t))} % — la valeur a diminué de ${fmt(Math.abs(vd-va))} €`;
+    interp.className = 'interp show down';
+  } else {
+    interp.textContent = '= Aucune évolution';
+    interp.className = 'interp show neutral-b';
+  }
+}
+function resetTaux() {
+  ['va','vd'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('taux-result').classList.remove('show');
+  document.getElementById('taux-interp').classList.remove('show');
+}
+function calcVD() {
+  const va = rawNum(document.getElementById('va2').value);
+  const t  = rawNum(document.getElementById('taux2').value);
+  if (isNaN(va) || isNaN(t)) { alert('Remplis VA et le taux.'); return; }
+  const vd = va * (1 + t / 100);
+  document.getElementById('vd-value').textContent = fmt(vd) + ' €';
+  document.getElementById('vd-formula').innerHTML = `<span>Calcul :</span> ${fmt(va)} × (1 + ${fmt(t)} ÷ 100)`;
+  document.getElementById('vd-result').classList.add('show');
+}
+function resetVD() {
+  ['va2','taux2'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('vd-result').classList.remove('show');
+}
+function calcVA() {
+  const vd = rawNum(document.getElementById('vd3').value);
+  const t  = rawNum(document.getElementById('taux3').value);
+  if (isNaN(vd) || isNaN(t)) { alert('Remplis VD et le taux.'); return; }
+  const va = vd / (1 + t / 100);
+  document.getElementById('va-value').textContent = fmt(va) + ' €';
+  document.getElementById('va-formula').innerHTML = `<span>Calcul :</span> ${fmt(vd)} ÷ (1 + ${fmt(t)} ÷ 100)`;
+  document.getElementById('va-result').classList.add('show');
+}
+function resetVA() {
+  ['vd3','taux3'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('va-result').classList.remove('show');
+}
+
+// ── MSCV / SR / POINT MORT ──
+function calcMSCV() {
+  const ca = rawNum(document.getElementById('ca').value);
+  const cv = rawNum(document.getElementById('cv').value);
+  const cf = rawNum(document.getElementById('cf').value);
+  const grid = document.getElementById('mscv-results');
+  if (isNaN(ca) || isNaN(cv) || isNaN(cf) || ca === 0) { grid.classList.remove('show'); return; }
+
+  const mscv     = ca - cv;
+  const tmscv    = (mscv / ca) * 100;
+  const sr       = tmscv !== 0 ? (cf / tmscv) * 100 : 0;
+  const resultat = mscv - cf;
+  const margeSec = ca - sr;
+
+  // Store for CA cible / SRF
+  _tmscv = tmscv; _sr = sr; _cf = cf; _ca = ca;
+
+  document.getElementById('res-mscv').textContent  = fmt(mscv) + ' €';
+  document.getElementById('res-tmscv').textContent = fmt(tmscv) + ' %';
+  document.getElementById('res-sr').textContent    = fmt(sr) + ' €';
+  document.getElementById('res-sr-sub').textContent =
+    ca >= sr ? `✅ CA atteint — tu dépasses le SR de ${fmt(margeSec)} €`
+             : `⚠️ CA insuffisant — il manque ${fmt(Math.abs(margeSec))} €`;
+  document.getElementById('sr-card').className = 'result-card ' + (ca >= sr ? 'wide' : 'wide warn');
+
+  const resEl = document.getElementById('res-resultat');
+  resEl.textContent = fmt(resultat) + ' €';
+  resEl.className = 'rc-value ' + (resultat >= 0 ? 'green' : 'red');
+  document.getElementById('res-resultat-sub').textContent = resultat >= 0 ? '✅ Bénéfice' : '❌ Perte';
+
+  const msEl = document.getElementById('res-margesec');
+  msEl.textContent = fmt(margeSec) + ' €';
+  msEl.className = 'rc-value ' + (margeSec >= 0 ? 'green' : 'red');
+
+  grid.classList.add('show');
+  document.getElementById('ca-cible-card').style.display = 'block';
+  document.getElementById('srf-card').style.display = 'block';
+  calcCACible();
+  calcSRF();
+
+  // ── POINT MORT ──
+  const joursAn    = rawNum(document.getElementById('jours-an').value) || 365;
+  const heuresJour = rawNum(document.getElementById('heures-jour').value) || 8;
+
+  if (sr > 0 && ca > 0) {
+    const ratio    = sr / ca;
+    const pmJours  = ratio * joursAn;
+    const pmMois   = ratio * 12;
+    const pmHeures = pmJours * heuresJour;
+
+    const joursEnt = Math.floor(pmJours);
+    const resteH   = Math.round((pmJours - joursEnt) * heuresJour);
+    const moisEnt  = Math.floor(pmMois);
+    const resteJ   = Math.round((pmMois - moisEnt) * 30);
+
+    document.getElementById('pm-jours').textContent =
+      joursEnt + ' j' + (resteH > 0 ? ' ' + resteH + ' h' : '');
+    document.getElementById('pm-jours-sub').textContent =
+      'Soit ' + fmt(ratio * 100, 1) + ' % de l\'année écoulée';
+    document.getElementById('pm-mois').textContent = moisEnt + ' mois';
+    document.getElementById('pm-mois-sub').textContent = resteJ > 0 ? '+ ' + resteJ + ' jours' : 'pile';
+    document.getElementById('pm-heures').textContent = fmt(pmHeures, 0) + ' h';
+
+    const annee    = new Date().getFullYear();
+    const datePM   = new Date(new Date(annee, 0, 1).getTime() + pmJours * 86400000);
+    document.getElementById('pm-date').textContent =
+      datePM.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    document.getElementById('pm-results').style.display = 'block';
+  } else {
+    document.getElementById('pm-results').style.display = 'none';
+  }
+}
+
+function resetMSCV() {
+  ['ca','cv','cf'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('jours-an').value = '365';
+  document.getElementById('heures-jour').value = '8';
+  document.getElementById('mscv-results').classList.remove('show');
+  document.getElementById('pm-results').style.display = 'none';
+  document.getElementById('ca-cible-results').style.display = 'none';
+  document.getElementById('srf-results').style.display = 'none';
+  document.getElementById('ca-cible-card').style.display = 'none';
+  document.getElementById('srf-card').style.display = 'none';
+}
+
+// ── STORED CALC STATE ──
+let _tmscv = NaN, _sr = NaN, _cf = NaN, _ca = NaN;
+
+// ── CA CIBLE ──
+function calcCACible() {
+  if (isNaN(_tmscv) || _tmscv === 0 || isNaN(_cf)) return;
+  const resCible  = rawNum(document.getElementById('res-cible').value);
+  const tauxCible = rawNum(document.getElementById('taux-cible').value);
+  let show = false;
+
+  if (!isNaN(resCible)) {
+    const caCibleRes = ((_cf + resCible) / (_tmscv / 100));
+    document.getElementById('ca-cible-res').textContent = fmt(caCibleRes) + ' €';
+    document.getElementById('ca-cible-res-sub').textContent =
+      `Pour un bénéfice de ${fmt(resCible)} € avec CF = ${fmt(_cf)} €`;
+    show = true;
+  } else {
+    document.getElementById('ca-cible-res').textContent = '—';
+    document.getElementById('ca-cible-res-sub').textContent = 'Remplis le résultat cible';
+  }
+
+  if (!isNaN(tauxCible) && tauxCible > 0) {
+    const resPourTaux = isNaN(resCible) ? 0 : resCible;
+    const caCibleTaux = ((_cf + resPourTaux) / (tauxCible / 100));
+    document.getElementById('ca-cible-taux').textContent = fmt(caCibleTaux) + ' €';
+    document.getElementById('ca-cible-taux-sub').textContent =
+      `Pour un TMSCV de ${fmt(tauxCible)} %` + (!isNaN(resCible) ? ` et résultat ${fmt(resCible)} €` : ' (résultat = 0)');
+    show = true;
+  } else {
+    document.getElementById('ca-cible-taux').textContent = '—';
+    document.getElementById('ca-cible-taux-sub').textContent = 'Remplis le taux de marge cible';
+  }
+
+  document.getElementById('ca-cible-results').style.display = show ? 'block' : 'none';
+}
+
+// ── SRF ──
+function calcSRF() {
+  if (isNaN(_tmscv) || _tmscv === 0 || isNaN(_cf)) return;
+  const chgFin  = rawNum(document.getElementById('charges-fin').value)  || 0;
+  const rembCap = rawNum(document.getElementById('remb-capital').value) || 0;
+
+  if (chgFin === 0 && rembCap === 0) {
+    document.getElementById('srf-results').style.display = 'none';
+    return;
+  }
+
+  const srf      = (_cf + chgFin + rembCap) / (_tmscv / 100);
+  const ecart    = srf - _sr;
+  const margeSRF = _ca - srf;
+
+  document.getElementById('res-srf').textContent = fmt(srf) + ' €';
+  document.getElementById('res-srf-sub').textContent =
+    _ca >= srf
+      ? `✅ CA actuel dépasse le SRF de ${fmt(margeSRF)} €`
+      : `⚠️ Il manque ${fmt(Math.abs(margeSRF))} € pour couvrir toutes les dettes`;
+
+  const srfCard = document.getElementById('srf-main-card');
+  srfCard.style.borderColor = _ca >= srf ? 'rgba(0,229,160,0.22)' : 'rgba(255,107,107,0.3)';
+  srfCard.style.background  = _ca >= srf
+    ? 'linear-gradient(135deg,rgba(0,229,160,0.08),rgba(108,99,255,0.08))'
+    : 'rgba(255,107,107,0.05)';
+  document.getElementById('res-srf').style.color = _ca >= srf ? 'var(--accent2)' : 'var(--accent3)';
+  document.getElementById('res-srf-ecart').textContent = fmt(ecart) + ' €';
+  const margeEl = document.getElementById('res-srf-marge');
+  margeEl.textContent = fmt(margeSRF) + ' €';
+  margeEl.className = 'rc-value ' + (margeSRF >= 0 ? 'green' : 'red');
+  document.getElementById('srf-results').style.display = 'block';
+}
+
+// ── EXCEL ──
+document.getElementById('excel-file-input').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const wb = XLSX.read(new Uint8Array(evt.target.result), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      processExcelData(XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }));
+    } catch(err) { alert('Erreur : ' + err.message); }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = '';
+});
+
+const KW = {
+  ca: ['chiffre d\'affaires','ca','ventes','vente','produits','recettes','revenu','revenus','turnover','c.a'],
+  cv: ['charges variables','cv','coût variable','coûts variables','cout variable','couts variables','charge variable','variable'],
+  cf: ['charges fixes','cf','coût fixe','coûts fixes','cout fixe','couts fixes','charge fixe','fixe','fixes','frais fixes','frais fixe']
+};
+function normalize(s) {
+  return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s'\.]/g,'').trim();
+}
+function matchKw(label, kwList) {
+  const n = normalize(label);
+  return kwList.some(kw => n.includes(normalize(kw)));
+}
+
+function processExcelData(rows) {
+  allRows = [];
+  rows.forEach((row, ri) => {
+    let label = '', amount = null;
+    for (let c = 0; c < row.length; c++) {
+      if (!label && typeof row[c] === 'string' && row[c].trim()) label = row[c].trim();
+    }
+    for (let c = row.length - 1; c >= 0; c--) {
+      if (typeof row[c] === 'number') { amount = row[c]; break; }
+    }
+    if (label && amount !== null) allRows.push({ label, amount, row: ri + 1 });
+  });
+  ['ca','cv','cf'].forEach(k => { detected[k] = null; sources[k] = ''; isManual[k] = false; });
+  allRows.forEach(r => {
+    if (!detected.ca && matchKw(r.label, KW.ca)) { detected.ca = r.amount; sources.ca = r.label; }
+    else if (!detected.cv && matchKw(r.label, KW.cv)) { detected.cv = r.amount; sources.cv = r.label; }
+    else if (!detected.cf && matchKw(r.label, KW.cf)) { detected.cf = r.amount; sources.cf = r.label; }
+  });
+  renderDetectPanel();
+  renderRowsPreview();
+  document.getElementById('detect-panel').classList.add('show');
+  document.getElementById('excel-zone').style.borderColor = 'var(--accent2)';
+}
+
+function renderDetectPanel() {
+  ['ca','cv','cf'].forEach(key => {
+    const valEl = document.getElementById(key + '-detect');
+    const srcEl = document.getElementById(key + '-src');
+    const badgeEl = document.getElementById(key + '-badge');
+    if (detected[key] !== null) {
+      valEl.textContent = fmt(detected[key]) + ' €';
+      valEl.className = 'detect-val' + (isManual[key] ? ' manual' : '');
+      srcEl.textContent = '"' + sources[key] + '"';
+      badgeEl.textContent = isManual[key] ? 'MANUEL' : 'AUTO';
+      badgeEl.className = isManual[key] ? 'badge-manual' : 'badge-auto';
+    } else {
+      valEl.textContent = 'Non trouvé'; valEl.className = 'detect-val empty';
+      srcEl.textContent = ''; badgeEl.textContent = '?'; badgeEl.className = 'badge-manual';
+    }
+  });
+}
+
+function renderRowsPreview() {
+  const c = document.getElementById('rows-preview');
+  c.innerHTML = '';
+  if (!allRows.length) { c.innerHTML = '<div class="rows-hint">Aucune ligne exploitable</div>'; return; }
+  allRows.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'row-item';
+    div.innerHTML = `<div class="row-label">Ligne ${r.row} — ${r.label}</div><div class="row-amount">${fmt(r.amount)} €</div>`;
+    div.onclick = () => assignRow(r);
+    c.appendChild(div);
+  });
+}
+
+function assignRow(r) {
+  const choice = prompt(`Assigner "${r.label}" (${fmt(r.amount)} €) à :\n1 = CA\n2 = CV\n3 = CF`);
+  const map = { '1':'ca', '2':'cv', '3':'cf' };
+  if (map[choice]) {
+    const key = map[choice];
+    detected[key] = r.amount; sources[key] = r.label; isManual[key] = true;
+    renderDetectPanel();
+  }
+}
+function cancelAssign() { assignTarget = null; }
+
+let modalKey = null;
+function openModal(key) {
+  modalKey = key;
+  const names = { ca:'CA — Chiffre d\'affaires', cv:'CV — Charges variables', cf:'CF — Charges fixes' };
+  document.getElementById('modal-title').textContent = 'Modifier : ' + names[key];
+  const inp = document.getElementById('modal-input');
+  inp.value = detected[key] !== null ? fmt(detected[key]) : '';
+  document.getElementById('modal-overlay').classList.add('show');
+  setTimeout(() => inp.focus(), 100);
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('show'); modalKey = null; }
+function saveModal() {
+  if (!modalKey) return;
+  const v = rawNum(document.getElementById('modal-input').value);
+  if (!isNaN(v)) { detected[modalKey] = v; sources[modalKey] = 'Saisie manuelle'; isManual[modalKey] = true; renderDetectPanel(); }
+  closeModal();
+}
+document.getElementById('modal-overlay').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+
+function sendToMSCV() {
+  if (detected.ca === null || detected.cv === null || detected.cf === null) {
+    alert('Il manque des valeurs. Complète manuellement celles non détectées.'); return;
+  }
+  function setV(id, val) {
+    document.getElementById(id).value = Number.isInteger(val)
+      ? String(val).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+      : fmt(val, 2);
+  }
+  setV('ca', detected.ca); setV('cv', detected.cv); setV('cf', detected.cf);
+  switchTab('mscv');
+  calcMSCV();
+}
+</script>
+</body>
+</html>
